@@ -25,7 +25,14 @@
 #include <utility>
 
 #if defined(__ANDROID__)
-#include <asm/page.h> // http://code.google.com/p/android/issues/detail?id=39983
+// airtime: start
+// #include <asm/page.h> // http://code.google.com/p/android/issues/detail?id=39983
+// Taking change from newer boost release that just hardcodes PAGE_SIZE:
+// http://www.boost.org/doc/libs/1_66_0/boost/thread/pthread/thread_data.hpp
+# ifndef PAGE_SIZE
+#  define PAGE_SIZE 4096
+# endif
+// airtime: end
 #endif
 
 #include <pthread.h>
