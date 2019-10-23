@@ -38,11 +38,8 @@ namespace boost
                 m(0)
             {}
 
-            // airtime:start
-            // remove attribute when OS X clang is not confused by this
-            void activate(MutexType& m_) __attribute__((no_thread_safety_analysis))
+            void activate(MutexType& m_)
             {
-            // airtime:end
                 m_.unlock();
                 m=&m_;
             }
