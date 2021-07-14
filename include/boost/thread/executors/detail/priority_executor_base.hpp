@@ -24,8 +24,8 @@ namespace detail
   class priority_executor_base
   {
   public:
-    typedef boost::function<void()> work;
-    //typedef executors::work work;
+    //typedef boost::function<void()> work;
+    typedef executors::work_pq work;
   protected:
     typedef Queue queue_type;
     queue_type _workq;
@@ -57,10 +57,16 @@ namespace detail
       {
         for(;;)
         {
-          work task;
-          queue_op_status st = _workq.wait_pull(task);
-          if (st == queue_op_status::closed) return;
-          task();
+          try {
+            work task;
+            queue_op_status st = _workq.wait_pull(task);
+            if (st == queue_op_status::closed) return;
+            task();
+          }
+          catch (boost::thread_interrupted&)
+          {
+            return;
+          }
         }
       }
       catch (...)

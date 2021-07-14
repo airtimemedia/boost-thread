@@ -6,7 +6,7 @@ using namespace boost;
 
 int main() {
     atomic<size_t> total(0), failures(0);
-    
+
 #pragma omp parallel shared(total, failures) num_threads(1000)
     {
       mutex mtx;
@@ -19,6 +19,11 @@ int main() {
       }
     }
     if(failures)
-      std::cerr << "There were " << failures << " failures out of " << total << " timed waits." << std::endl;
-    return failures!=0;
+      std::cout << "There were " << failures << " failures out of " << total << " timed waits." << std::endl;
+    if((100*failures)/total>40)
+    {
+      std::cerr << "This exceeds 10%, so failing the test." << std::endl;
+      return 1;
+    }
+    return 0;
 }

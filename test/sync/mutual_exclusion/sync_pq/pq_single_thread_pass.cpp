@@ -1,5 +1,5 @@
 // Copyright (C) 2014 Ian Forbed
-// Copyright (C) 2014 Vicente J. Botet Escriba
+// Copyright (C) 2014,2015 Vicente J. Botet Escriba
 //
 //  Distributed under the Boost Software License, Version 1.0. (See accompanying
 //  file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -20,8 +20,11 @@
 #include <boost/thread/concurrent_queues/sync_priority_queue.hpp>
 
 #include <boost/detail/lightweight_test.hpp>
+#include "../../../timming.hpp"
 
 using namespace boost::chrono;
+typedef boost::chrono::milliseconds ms;
+typedef boost::chrono::nanoseconds ns;
 
 typedef boost::concurrent::sync_priority_queue<int> sync_pq;
 
@@ -46,6 +49,7 @@ public:
   }
 };
 
+const ms max_diff(BOOST_THREAD_TEST_TIME_MS);
 
 void test_pull_for()
 {
@@ -53,9 +57,9 @@ void test_pull_for()
   steady_clock::time_point start = steady_clock::now();
   int val;
   boost::queue_op_status st = pq.pull_for(milliseconds(500), val);
-  steady_clock::duration diff = steady_clock::now() - start;
+  ns d = steady_clock::now() - start - milliseconds(500);
+  BOOST_THREAD_TEST_IT(d, ns(max_diff));
   BOOST_TEST(boost::queue_op_status::timeout == st);
-  BOOST_TEST(diff < milliseconds(550) && diff > milliseconds(500));
 }
 
 void test_pull_until()
@@ -64,9 +68,9 @@ void test_pull_until()
   steady_clock::time_point start = steady_clock::now();
   int val;
   boost::queue_op_status st = pq.pull_until(start + milliseconds(500), val);
-  steady_clock::duration diff = steady_clock::now() - start;
+  ns d = steady_clock::now() - start - milliseconds(500);
+  BOOST_THREAD_TEST_IT(d, ns(max_diff));
   BOOST_TEST(boost::queue_op_status::timeout == st);
-  BOOST_TEST(diff < milliseconds(550) && diff > milliseconds(500));
 }
 
 void test_nonblocking_pull()
@@ -75,9 +79,9 @@ void test_nonblocking_pull()
   steady_clock::time_point start = steady_clock::now();
   int val;
   boost::queue_op_status st = pq.nonblocking_pull(val);
-  steady_clock::duration diff = steady_clock::now() - start;
+  ns d = steady_clock::now() - start;
+  BOOST_THREAD_TEST_IT(d, ns(max_diff));
   BOOST_TEST(boost::queue_op_status::empty == st);
-  BOOST_TEST(diff < milliseconds(5));
 }
 
 void test_pull_for_when_not_empty()
@@ -87,10 +91,10 @@ void test_pull_for_when_not_empty()
   steady_clock::time_point start = steady_clock::now();
   int val;
   boost::queue_op_status st = pq.pull_for(milliseconds(500), val);
-  steady_clock::duration diff = steady_clock::now() - start;
+  ns d = steady_clock::now() - start;
+  BOOST_THREAD_TEST_IT(d, ns(max_diff));
   BOOST_TEST(boost::queue_op_status::success == st);
   BOOST_TEST(1 == val);
-  BOOST_TEST(diff < milliseconds(5));
 }
 
 void test_pull_until_when_not_empty()
@@ -100,10 +104,10 @@ void test_pull_until_when_not_empty()
   steady_clock::time_point start = steady_clock::now();
   int val;
   boost::queue_op_status st = pq.pull_until(start + milliseconds(500), val);
-  steady_clock::duration diff = steady_clock::now() - start;
+  ns d = steady_clock::now() - start;
+  BOOST_THREAD_TEST_IT(d, ns(max_diff));
   BOOST_TEST(boost::queue_op_status::success == st);
   BOOST_TEST(1 == val);
-  BOOST_TEST(diff < milliseconds(5));
 }
 
 int main()
@@ -149,17 +153,15 @@ int main()
   //test_pull_until_when_not_empty();
 
 #if ! defined  BOOST_NO_CXX11_RVALUE_REFERENCES
-#if 0
   {
     // empty queue try_push rvalue/non-copyable succeeds
       boost::concurrent::sync_priority_queue<non_copyable> q;
-      BOOST_TEST(boost::queue_op_status::success ==q.try_push(non_copyable()));
+      BOOST_TEST(boost::queue_op_status::success ==q.try_push(non_copyable(1)));
       BOOST_TEST(! q.empty());
       BOOST_TEST(! q.full());
       BOOST_TEST_EQ(q.size(), 1u);
       BOOST_TEST(! q.closed());
   }
-#endif
   {
     //fixme
     // empty queue try_push rvalue/non-copyable succeeds
@@ -183,17 +185,16 @@ int main()
       BOOST_TEST_EQ(q.size(), 1u);
       BOOST_TEST(! q.closed());
   }
-//  {
-//    // empty queue try_push rvalue succeeds
-//      boost::concurrent::sync_priority_queue<int> q;
-//      BOOST_TEST(boost::queue_op_status::success == q.nonblocking_push(1));
-//      BOOST_TEST(! q.empty());
-//      BOOST_TEST(! q.full());
-//      BOOST_TEST_EQ(q.size(), 1u);
-//      BOOST_TEST(! q.closed());
-//  }
-#if ! defined  BOOST_NO_CXX11_RVALUE_REFERENCES
 #if 0
+  {
+    // empty queue try_push rvalue succeeds
+      boost::concurrent::sync_priority_queue<int> q;
+      BOOST_TEST(boost::queue_op_status::success == q.nonblocking_push(1));
+      BOOST_TEST(! q.empty());
+      BOOST_TEST(! q.full());
+      BOOST_TEST_EQ(q.size(), 1u);
+      BOOST_TEST(! q.closed());
+  }
   {
     // empty queue nonblocking_push rvalue/non-copyable succeeds
       boost::concurrent::sync_priority_queue<non_copyable> q;
@@ -203,17 +204,16 @@ int main()
       BOOST_TEST_EQ(q.size(), 1u);
       BOOST_TEST(! q.closed());
   }
-#endif
-//  {
-//    // empty queue nonblocking_push rvalue/non-copyable succeeds
-//      boost::concurrent::sync_priority_queue<non_copyable> q;
-//      non_copyable nc(1);
-//      BOOST_TEST(boost::queue_op_status::success == q.nonblocking_push(boost::move(nc)));
-//      BOOST_TEST(! q.empty());
-//      BOOST_TEST(! q.full());
-//      BOOST_TEST_EQ(q.size(), 1u);
-//      BOOST_TEST(! q.closed());
-//  }
+  {
+    // empty queue nonblocking_push rvalue/non-copyable succeeds
+      boost::concurrent::sync_priority_queue<non_copyable> q;
+      non_copyable nc(1);
+      BOOST_TEST(boost::queue_op_status::success == q.nonblocking_push(boost::move(nc)));
+      BOOST_TEST(! q.empty());
+      BOOST_TEST(! q.full());
+      BOOST_TEST_EQ(q.size(), 1u);
+      BOOST_TEST(! q.closed());
+  }
 #endif
 
   {
